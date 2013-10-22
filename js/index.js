@@ -28,10 +28,10 @@ function animate(){
 
 		var time = (new Date()).getTime();
 		var timeDiff = time - lastTime;
-		var angleChange = angularSpeed * timeDiff * Math.PI/180;
+		var angleChange = (angularSpeed * timeDiff * Math.PI/180) * animations.amt;
 		
 		$.each(animations.set, function(i, cubie){
-			if( animTracker + angleChange < animations.amt*Math.PI/2 ){
+			if( Math.abs(animTracker + angleChange) < Math.abs((animations.amt*Math.PI/2) * animations.amt) ){
 				rotateAroundWorldAxis( cubie, worldAxes[ animations.axis ] , angleChange );
 			}else{
 				rotateAroundWorldAxis( cubie, worldAxes[ animations.axis ], animations.amt*Math.PI/2 - animTracker );
@@ -54,13 +54,25 @@ function animate(){
 				var k = data.z;
 
 				if( animations.axis == 'x' ){
-					newConfig[i][2-k][j] = cubie;
+					if( animations.amt == 1 ){
+						newConfig[i][2-k][j] = cubie;
+					}else if( animations.amt == -1 ){
+						newConfig[i][k][2-j] = cubie;
+					}
 				}
 				if( animations.axis == 'y' ){
-					newConfig[k][j][2-i] = cubie;
+					if( animations.amt == 1 ){
+						newConfig[k][j][2-i] = cubie;
+					}else if( animations.amt == -1 ){
+						newConfig[2-k][j][i] = cubie;
+					}
 				}
 				if( animations.axis == 'z' ){
-					newConfig[2-j][i][k] = cubie;
+					if( animations.amt == 1 ){
+						newConfig[2-j][i][k] = cubie;
+					}else if( animations.amt == -1 ){
+						newConfig[j][2-i][k] = cubie;
+					}
 				}
 			}, filter);
 
@@ -235,7 +247,7 @@ var target = {
 
 var commands = {
 	turnUp : function(){
-		// triggerTurn(dimensions[dPointer], target[ dimensions[dPointer] ], -1 );
+		triggerTurn(dimensions[dPointer], target[ dimensions[dPointer] ], -1 );
 	},
 	turnDown : function(){
 		triggerTurn(dimensions[dPointer], target[ dimensions[dPointer] ]);
