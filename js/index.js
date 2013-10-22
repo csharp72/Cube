@@ -8,6 +8,8 @@ var animations = null;
 var animTracker = null;
 var wrapUpAnim = false;
 var animStarted = false;
+var container = document.getElementById('scene');
+var glowObjs = [];
 
 var worldAxes = {
 	x : new THREE.Vector3(1,0,0),
@@ -107,10 +109,12 @@ function runAnimation( cb ){
 
 }
 
+projector = new THREE.Projector();
+
 // renderer
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+container.appendChild(renderer.domElement);
 
 // camera
 var camera = new THREE.PerspectiveCamera(20, window.innerWidth / window.innerHeight, 1, 5000);
@@ -184,6 +188,27 @@ function createCubie(x,y,z){
 	cubie.overdraw = true;
 	cube.add(cubie);
 
+	// // create custom material from the shader code above
+	// //   that is within specially labeled script tags
+	// var customMaterial = new THREE.ShaderMaterial({
+	//     uniforms: { 
+	// 		"c":   { type: "f", value: 1.0 },
+	// 		"p":   { type: "f", value: 1.4 },
+	// 		glowColor: { type: "c", value: new THREE.Color(0xff0000) },
+	// 		viewVector: { type: "v3", value: camera.position }
+	// 	},
+	// 	vertexShader:   document.getElementById( 'vertexShader'   ).textContent,
+	// 	fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+	// 	side: THREE.BackSide,
+	// 	blending: THREE.AdditiveBlending,
+	// 	transparent: true
+	// });
+		
+	// this.cubeGlow = new THREE.Mesh( cubieGeo.clone(), customMaterial.clone() );
+ //    cubeGlow.position = cubie.position;
+	// cubeGlow.scale.multiplyScalar(1.05);
+	// cube.add( cubeGlow );
+
 	return cubie;
 }
 
@@ -196,12 +221,12 @@ function eachCubie( fn, filter ){
 		for(var j=0; j<3; j++){
 			for(var k=0; k<3; k++){
 				var cubie = currentConfig[i][j][k];
-
-				if( (typeof filter.x == 'undefined' || filter.x == i)
+				if( !filter || (
+					(typeof filter.x == 'undefined' || filter.x == i)
 				&&  (typeof filter.y == 'undefined' || filter.y == j)
 				&&  (typeof filter.z == 'undefined' || filter.z == k)
-				){
-					fn( cubie, {'i':count, 'x':i, 'y':j, 'z':k } );
+				)){
+					fn && fn( cubie, {'i':count, 'x':i, 'y':j, 'z':k } );
 					cubieArr.push( cubie );
 				}
 				count++;
@@ -219,7 +244,7 @@ function triggerTurn(axis, col, amt){
 	var col = col || 0;
 	var filter = {};
 	filter[ axis ] = col;
-	var set = eachCubie($.noop, filter);		
+	var set = eachCubie(false, filter);		
 	animations = {set:set, axis:axis, col:col, amt:amt};
 }
 
@@ -282,7 +307,7 @@ var controls = {
 	40 : commands.turnDown, //down
 	13 : commands.turnDown, //enter
 }
-$(document).on('keypress', function(e){
+$(document).on('keypress keydown', function(e){
 	var code = ( e.which || e.keyCode )
 	var command = controls[ code ];
 	command && command.call( this );
@@ -290,3 +315,40 @@ $(document).on('keypress', function(e){
 	$('.y-target').removeClass('selected').addClass( dPointer == 1 && 'selected' ).text( target.y );
 	$('.z-target').removeClass('selected').addClass( dPointer == 2 && 'selected' ).text( target.z );
 });
+
+// document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+function onDocumentMouseMove( event ) {
+
+	event.preventDefault();
+
+	var vector = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1, 0.5 );
+	projector.unprojectVector( vector, camera );
+
+	var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+	var objects = eachCubie();
+
+	var intersects = raycaster.intersectObjects( objects );
+
+	if ( intersects.length > 0 ) {
+
+		glow( intersects[0].object )
+
+	}
+
+}
+
+function glow( obj ){
+	for( var i = 0; i<glowObjs.length; i++ ){
+		cube.remove(glowObjs[i]);
+		delete glowObjs[i];
+	}
+	glowObjs = [];
+	var glowObj = obj.clone();
+	glowObj.material = new THREE.MeshBasicMaterial( { color: 0x0000ff, opacity: 0.5, transparent:true } );
+	glowObj.position = obj.position;
+	glowObj.rotation = obj.rotation;
+	cube.add( glowObj );
+	glowObjs.push(glowObj);
+}
