@@ -283,26 +283,34 @@ var commands = {
 	right : function(){
 		console.log('right');
 	},
-	increase : function(){
+	increaseRow : function(){
 		target[ dimensions[dPointer] ] < 2 && target[ dimensions[dPointer] ]++;
+		highlightSelected();
+		updateText();
 		// console.log( 'command:increase', 'dimenstion=',dimensions[dPointer], 'row=',target[ dimensions[dPointer] ])
 	},
-	decrease : function(){
+	decreaseRow : function(){
 		target[ dimensions[dPointer] ] > 0 && target[ dimensions[dPointer] ]--;
+		highlightSelected();
+		updateText();
 		// console.log( 'command:decrease', 'dimenstion=',dimensions[dPointer], 'row=',target[ dimensions[dPointer] ])
 	},
-	increaseD : function(){
+	increaseAxis : function(){
 		dPointer < 2 && dPointer++;
+		highlightSelected();
+		updateText();
 	},
-	decreaseD : function(){
+	decreaseAxis : function(){
 		dPointer > 0 && dPointer--;
+		highlightSelected();
+		updateText();
 	}
 }
 var controls = {
-	119 : commands.increase, //w
-	115 : commands.decrease, //s
-	97 : commands.decreaseD, //a
-	100 : commands.increaseD, //d
+	119 : commands.decreaseAxis, //w
+	115 : commands.increaseAxis, //s
+	97 : commands.decreaseRow, //a
+	100 : commands.increaseRow, //d
 	38 : commands.turnUp, //up
 	40 : commands.turnDown, //down
 	13 : commands.turnDown, //enter
@@ -311,44 +319,58 @@ $(document).on('keypress keydown', function(e){
 	var code = ( e.which || e.keyCode )
 	var command = controls[ code ];
 	command && command.call( this );
-	$('.x-target').removeClass('selected').addClass( dPointer == 0 && 'selected' ).text( target.x );
-	$('.y-target').removeClass('selected').addClass( dPointer == 1 && 'selected' ).text( target.y );
-	$('.z-target').removeClass('selected').addClass( dPointer == 2 && 'selected' ).text( target.z );
 });
 
+
+highlightSelected();
+updateText();
+
 // document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+// function onDocumentMouseMove( event ) {
+// 	event.preventDefault();
+// 	var vector = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1, 0.5 );
+// 	projector.unprojectVector( vector, camera );
+// 	var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+// 	var objects = eachCubie();
+// 	var intersects = raycaster.intersectObjects( objects );
+// 	if ( intersects.length > 0 ) {
+// 		glow( intersects[0].object )
+// 	}
+// }
 
-function onDocumentMouseMove( event ) {
-
-	event.preventDefault();
-
-	var vector = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1, 0.5 );
-	projector.unprojectVector( vector, camera );
-
-	var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
-
-	var objects = eachCubie();
-
-	var intersects = raycaster.intersectObjects( objects );
-
-	if ( intersects.length > 0 ) {
-
-		glow( intersects[0].object )
-
-	}
-
+function updateText(){
+	$('.x-target').removeClass('selected').addClass( dPointer == 0 && 'selected' ).find('span').text( target.x );
+	$('.y-target').removeClass('selected').addClass( dPointer == 1 && 'selected' ).find('span').text( target.y );
+	$('.z-target').removeClass('selected').addClass( dPointer == 2 && 'selected' ).find('span').text( target.z );
 }
 
-function glow( obj ){
+function highlightSelected(){
+	var options = {};
+	options[ dimensions[dPointer] ] = target[ dimensions[dPointer] ]
+	glow( eachCubie(null, options) );
+}
+
+function glow( objOrArr ){
 	for( var i = 0; i<glowObjs.length; i++ ){
 		cube.remove(glowObjs[i]);
 		delete glowObjs[i];
 	}
 	glowObjs = [];
-	var glowObj = obj.clone();
-	glowObj.material = new THREE.MeshBasicMaterial( { color: 0x0000ff, opacity: 0.5, transparent:true } );
-	glowObj.position = obj.position;
-	glowObj.rotation = obj.rotation;
-	cube.add( glowObj );
-	glowObjs.push(glowObj);
+
+	if( typeof objOrArr == 'object' ){
+		for( var i = 0; i<objOrArr.length; i++){
+			createGlow( objOrArr[i] );
+		}
+	}else{
+		createGlow( objOrArr );
+	}
+	
+	function createGlow( obj ){
+		var glowObj = obj.clone();
+		glowObj.material = new THREE.MeshBasicMaterial( { color: 0x0000ff, opacity: 0.3, transparent:true } );
+		glowObj.position = obj.position;
+		glowObj.rotation = obj.rotation;
+		cube.add( glowObj );
+		glowObjs.push(glowObj);
+	}
 }
